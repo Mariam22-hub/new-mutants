@@ -39,28 +39,46 @@ If you haven’t set up SSH keys for GitHub, follow the steps below:
 
 2. **Navigate to the Script Directory**
     
-    * Change into the directory where the script is located:
+    * Change into the directory where the scripts are located:
         
         ```bash
         cd path/to/script
         ```
 
 3. **Run the Script**
-    
+   1. First run the ```checkMatch.py``` script to generate the outputs directory containing all the mutants which are: ```unconfirmed - confirmed - uiucplus```
+     
     * Use the following command format to run the script:
         
         ```bash
-        python generate_mutants.py <techniques> <desired_mutants_count> <projects_directory>
+        python checkMatch.py <techniques> <data_dir> <defect_dir> <output_dir> <uiucplusMutant.csv>
+        ```
+      * **Example:**
+        
+        ```bash
+        pythoncheckMatch.py path/to/data path/to/defect path/to/output leam path/to/uiucplusMutant.csv
+        ```
+   2. Second run the ```collect_mutants.py``` script to convert the mutants from jsonl to pk files for faster retrieval
+     
+    * Use the following command format to run the script:
+        
+        ```bash
+        python collect_mutants.py <techniques> <output_dir>
+        ```
+        * **Example:**
+        
+        ```bash
+        python collect_mutants.py leam,mubert path/to/output
+        ```
+
+    3. Finally, run the ```generate_mutants.py``` script to randomly select mutants
+     
+    * Use the following command format to run the script:
+        
+        ```bash
+        python generate_mutants.py <techniques> <desired_count> <java_project>
         ```
     
-    * **Parameters:**
-        
-        * `<techniques>`: A comma-separated list of techniques (e.g., `leam,another_technique`).
-            
-        * `<desired_mutants_count>`: The number of mutants you want to reproduce (e.g., `600`).
-            
-        * `<projects_directory>`: The directory path where the projects are located.
-            
     * **Example:**
         
         ```bash
