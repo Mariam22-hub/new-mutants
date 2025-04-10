@@ -9,7 +9,7 @@ import subprocess
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from multiprocessing import Lock, Manager
 import pickle
-
+# from format_mutants import format_java_code
 
 project_names = [
     "commons-csv", "commons-cli", "commons-collections", "commons-compress", "commons-codec", 
@@ -32,27 +32,97 @@ def git_operations(file_path: str, project: str, technique: str, method_idx: int
     project_index = file_path.find(project)
     if project_index != -1:
         file_path = file_path[project_index:] 
-    
-    subprocess.run(['git', 'checkout', '-b', branch_name])
+
+    result = subprocess.run(['git', 'checkout', '-b', branch_name])
+    print("Executing: ", result.args)
+    if result.returncode != 0:
+        exit(1)
 
     # Add, commit, and push changes
-    subprocess.run(['git', 'add', file_path])
-    commit_message = f"Inject mutant: {branch_name}"
-    subprocess.run(['git', 'commit', '-m', commit_message])
-    
-    # Push the branch to remote repository
-    push_result = subprocess.run(['git', 'push', 'origin', branch_name], capture_output=True, text=True)
-
-    if push_result.returncode == 0:
-        print(f"Branch '{branch_name}' pushed successfully!")
-        print(f"Switching back to main")
+    format_result = subprocess.run(['google-java-format', '-i', file_path])
+    print("Executing: ", result.args)
+    if format_result.returncode != 0:
+        print(f"Failed to format the file: {file_path}")
         subprocess.run(['git', 'checkout', "main"])
-        os.chdir(original_directory)
-        
-        return True
-    else:
-        print(f"Failed to push branch '{branch_name}'. Error: {push_result.stderr}")
         return False
+
+    result = subprocess.run(['git', 'add', file_path])
+    print("Executing: ", result.args)
+    if result.returncode != 0:
+        exit(1)
+    commit_message = f"{branch_name}"
+    result = subprocess.run(['git', 'commit', '-m', commit_message])
+    print("Executing: ", result.args)
+    if result.returncode != 0:
+        exit(1)
+
+    # Create a formatted-main branch for diff with formatted main java code
+    result = subprocess.run(['git', 'checkout', "main"])
+    print("Executing: ", result.args)
+    if result.returncode != 0:
+        exit(1)
+    result = subprocess.run(['git', 'checkout', '-b', f'formatted-main-{branch_name}'])
+    print("Executing: ", result.args)
+    if result.returncode != 0:
+        exit(1)
+    result = subprocess.run(['google-java-format', '-i', file_path])
+    print("Executing: ", result.args)
+    if result.returncode != 0:
+        exit(1)
+    result = subprocess.run(['git', 'add', file_path])
+    print("Executing: ", result.args)
+    if result.returncode != 0:
+        exit(1)
+    result = subprocess.run(['git', 'commit', '-m', f"Formatted main branch before {branch_name} injection"])
+    print("Executing: ", result.args)
+    if result.returncode != 0:
+        exit(1)
+    # result = subprocess.run(['git', 'push', 'origin', f'formatted-main-{branch_name}'])
+#     print("Executing: ", result.args)
+    # if result.returncode != 0:
+    #     exit(1)
+
+    # # Push the branch to remote repository
+    # push_result = result = subprocess.run(['git', 'push', 'origin', branch_name], capture_output=True, text=True)
+#     print("Executing: ", result.args)
+    # if result.returncode != 0:
+    #     exit(1)
+
+    result = subprocess.run(['git', 'checkout', "main"])
+    print("Executing: ", result.args)
+    if result.returncode != 0:
+        exit(1)
+    # if push_result.returncode == 0:
+    #     print(f"Branch '{branch_name}' pushed successfully!")
+    #     print(f"Switching back to main")
+    #     # git diff formatted-main mutant-branch
+    # Print diff with colors
+    subprocess.run(['git', '--no-pager', 'diff', f'formatted-main-{branch_name}', branch_name])
+
+    result = subprocess.run(['git', '--no-pager', 'diff', f'formatted-main-{branch_name}', branch_name], capture_output=True, text=True)
+    if result.stdout == '':
+        print(f"No difference found between formatted main and {branch_name} branch.")
+        with open('../empty_diff.txt', 'a') as f:
+            f.write(f"{branch_name}\n")
+    else:
+        # Check if stdout is more than 50 lines
+        stdout_lines = result.stdout.count('\n')
+        if stdout_lines > 50:
+            print(f"Diff is too long ({stdout_lines} lines), saving to too_long.txt")
+            with open('../too_long.txt', 'a') as f:
+                f.write(f"{branch_name}: {stdout_lines} lines\n")
+    # if result.returncode != 0:
+    #     exit(1)
+    #     result = subprocess.run(['git', 'checkout', "main"])
+#     print("Executing: ", result.args)
+    # if result.returncode != 0:
+    #     exit(1)
+    os.chdir(original_directory)
+    return True
+    #     return True
+    # else:
+    #     print(f"Failed to push branch '{branch_name}'. Error: {push_result.stderr}")
+    #     return False
 
 def inject_mutant_and_commit(file_path: str, start: int, end: int, code: str, project: str, 
                              technique: str, method_idx: int, line_idx: int, buggy_method_number: int, 
@@ -77,6 +147,10 @@ def inject_mutant_and_commit(file_path: str, start: int, end: int, code: str, pr
     # Injecting
     new_lines = ''.join(lines[:start - 1]) + code + ''.join(lines[end:])
     with open(file_path, 'w') as f:
+        # # Format Java code before writing
+        # formatted_code = format_java_code(new_lines)
+        # if formatted_code == "":
+        #     return False
         f.write(new_lines)
 
     status = git_operations(file_path, project, technique, method_idx, line_idx, 
@@ -166,7 +240,7 @@ def random_selection(project_to_mutants: dict, desired_count: int, technique: st
         lock = manager.Lock()
 
         with tqdm(total=desired_count, desc=f"Processing Mutants for {technique}") as pbar:
-            with ProcessPoolExecutor(max_workers=os.cpu_count() - 1) as executor:
+            with ProcessPoolExecutor(max_workers=1) as executor:
                 
                 while found < desired_count:
                     count += 1

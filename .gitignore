@@ -1,0 +1,6 @@
+.venv
+artifacts
+generated_mutants
+mutants_pk
+output
+*.java
