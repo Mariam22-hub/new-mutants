@@ -17,7 +17,7 @@ project_names = [
 count = 0
 
 # Load the CSV file that contains info about mutants that successfully compile
-combined_mutants = pd.read_csv("combined_techniques_projects.csv")
+# combined_mutants = pd.read_csv("combined_techniques_projects.csv")
 
 # This function processes one project + technique at a time
 def process_project_technique(project_name, technique, data_dir, defect_dir, output_dir, uiuc_mutant):
@@ -71,16 +71,23 @@ def process_project_technique(project_name, technique, data_dir, defect_dir, out
         # Get confirmed bugs for this method and project
         confirmed_bug_dict = dict(
             all_confirmed_bugs[
-                (all_confirmed_bugs['method_idx'] == method_idx) & 
+                (all_confirmed_bugs['method_idx'] == int(method_idx)) & 
                 (all_confirmed_bugs['project'] == project_name)
             ]['func']
         )
+
+        # if not confirmed_bug_dict:
+        #     print(f"No confirmed bugs found for method_idx {method_idx} in project {project_name}")
+        #     exit(1)
 
         confirmed_bug_idx = []  # List to collect confirmed mutant indices
 
         # Loop through each mutant in selected_bugs
         for k in ks:
             buggy_method = target.get(f'buggy_method{k}')
+            # print(f"Matched buggy_method: {buggy_method}")
+            # print(f"Confirmed bug dict: {confirmed_bug_dict}")
+            # exit(1)
             if buggy_method in confirmed_bug_dict.values():
                 # Match found — log and keep the index
                 bug = next(key for key, value in confirmed_bug_dict.items() if value == buggy_method)
@@ -104,14 +111,15 @@ def process_project_technique(project_name, technique, data_dir, defect_dir, out
         macthed_mutants_jsonl = []
 
         # Check which remaining mutants are matched by filename
-        for index in temp:
-            filename = f"{project_name}.{method_idx}.{index}.{technique}-base.build.log"
-            macthed_dict = combined_mutants.loc[combined_mutants["Filename"] == filename]
-            if not macthed_dict.empty:
-                macthed_mutants_jsonl.append(index)
+        # for index in temp:
+        #     filename = f"{project_name}.{method_idx}.{index}.{technique}-base.build.log"
+        #     macthed_dict = combined_mutants.loc[combined_mutants["Filename"] == filename]
+        #     if not macthed_dict.empty:
+        #         macthed_mutants_jsonl.append(index)
 
         # Final candidates: remaining ∩ matched
-        target["final"] = list(set(temp) & set(macthed_mutants_jsonl))
+        # target["final"] = list(set(temp)) & set(macthed_mutants_jsonl))
+        target["final"] = list(set(temp))
 
         # Write this processed method entry back to output
         output_file.write(json.dumps(target) + '\n')
