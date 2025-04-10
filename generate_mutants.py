@@ -102,14 +102,14 @@ def git_operations(file_path: str, project: str, technique: str, method_idx: int
     result = subprocess.run(['git', '--no-pager', 'diff', f'formatted-main-{branch_name}', branch_name], capture_output=True, text=True)
     if result.stdout == '':
         print(f"No difference found between formatted main and {branch_name} branch.")
-        with open('empty_diff.txt', 'a') as f:
+        with open('../empty_diff.txt', 'a') as f:
             f.write(f"{branch_name}\n")
     else:
         # Check if stdout is more than 50 lines
         stdout_lines = result.stdout.count('\n')
         if stdout_lines > 50:
             print(f"Diff is too long ({stdout_lines} lines), saving to too_long.txt")
-            with open('too_long.txt', 'a') as f:
+            with open('../too_long.txt', 'a') as f:
                 f.write(f"{branch_name}: {stdout_lines} lines\n")
     # if result.returncode != 0:
     #     exit(1)
